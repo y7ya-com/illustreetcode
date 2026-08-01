@@ -1,0 +1,16 @@
+{
+  // Deploy config — placeholders until the Cloudflare account details exist.
+  // 1. wrangler d1 create illustreetcode && paste database_id below
+  // 2. wrangler d1 migrations apply illustreetcode --remote
+  // 3. wrangler secret put BETTER_AUTH_SECRET (+ GITHUB_/GOOGLE_ creds)
+  "name": "illustreetcode",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "illustreetcode",
+      "database_id": "REPLACE_ME"
+    }
+  ]
+}
