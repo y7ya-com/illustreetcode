@@ -4,6 +4,9 @@ import { tanstackStart } from '@tanstack/svelte-start/plugin/vite'
 
 export default defineConfig({
   plugins: [tanstackStart({ srcDirectory: 'src' }), svelte()],
+  // the QuickJS worker code-splits (wasm variant is its own chunk) — the
+  // default iife worker format can't code-split
+  worker: { format: 'es' },
   resolve: {
     // CM6 breaks on duplicate @codemirror/state instances (instanceof checks)
     dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
