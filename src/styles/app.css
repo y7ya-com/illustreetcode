@@ -49,16 +49,24 @@ select {
 
 /* ------------------------------------------------- illustrator (invariants live in player.ts) */
 .viz-host { position: relative; }
-.viz-links { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 3; }
-.link {
-  fill: none; stroke: var(--violet); stroke-width: 1.8; stroke-linecap: round;
-  stroke-dasharray: 5 4; opacity: .9; animation: draw .45s ease;
+/* provenance: the ingredients of the cell that just changed glow violet —
+   the destination itself pops amber (.hit) */
+.cell.src .val {
+  border-color: var(--violet);
+  background: var(--violet-bg);
+  animation: srcpulse .5s ease;
 }
-@keyframes draw { from { opacity: 0; } }
-.linklabel {
-  fill: var(--violet); font-family: 'Virgil', cursive; font-size: 11px;
-  text-anchor: middle; paint-order: stroke; stroke: var(--panel);
-  stroke-width: 4px; stroke-linejoin: round;
+.scalar.src {
+  color: var(--violet);
+  background: var(--violet-bg);
+  border-radius: var(--sks);
+  padding: .05rem .4rem;
+  animation: srcpulse .5s ease;
+}
+@keyframes srcpulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12) rotate(-1deg); }
+  100% { transform: scale(1); }
 }
 /* row is the offsetParent so FLIP measures within-row movement only */
 .vrow {

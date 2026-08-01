@@ -25,7 +25,6 @@
 
 <header>
   <Link to="/" class="brand">Illustreet<span>Code</span></Link>
-  <span class="tag">not affiliated with LeetCode</span>
 </header>
 <main><Outlet /></main>
 <Scripts />
@@ -37,6 +36,5 @@
   }
   header :global(.brand) { font-size: 1.35rem; text-decoration: none; }
   header :global(.brand span) { color: var(--violet); }
-  .tag { color: var(--muted); font-size: .72rem; margin-left: auto; }
   main { max-width: 1200px; margin: 0 auto; padding: 1.2rem 1.4rem 4rem; }
 </style>

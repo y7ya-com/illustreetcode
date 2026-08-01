@@ -164,6 +164,11 @@ export function instrument(code: string, exclude: Array<string> = []): string {
       visitBlock(((n as AnyNode).body as Array<AnyNode>) ?? [], anc as unknown as Array<Node>),
   })
 
+  // Payload order = declaration order: sort declaration sites by source
+  // position so rendered rows follow the code's own layout (params first,
+  // then declarations top-to-bottom), not discovery order.
+  decls.sort((a, b) => a.pos - b.pos)
+
   // Build each probe's payload: names declared earlier in source, in a scope
   // that encloses the probe (module scope or any enclosing function).
   const splices = probes.map(({ at, line, fns }) => {

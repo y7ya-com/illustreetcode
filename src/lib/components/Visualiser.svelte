@@ -17,8 +17,6 @@
   } = $props()
 
   let rows: HTMLDivElement
-  let links: SVGSVGElement
-  let host: HTMLDivElement
   let player: Player | undefined
 
   let open = $state(false)
@@ -37,7 +35,7 @@
 
   onMount(() => {
     player = new Player({
-      rows, links, host,
+      rows,
       onStep: (a, t, ln, lt) => {
         at = a
         total = t
@@ -155,8 +153,7 @@
   <div class="line mono">{total ? `line ${lineNo}:  ${lineText}` : ''}</div>
   {#if returned}<div class="ret mono">{returned}</div>{/if}
   {#if error}<div class="verr">{error}</div>{/if}
-  <div class="viz-host" bind:this={host}>
-    <svg class="viz-links" bind:this={links}></svg>
+  <div class="viz-host">
     <div bind:this={rows}></div>
   </div>
 </div>

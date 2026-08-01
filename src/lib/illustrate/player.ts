@@ -43,10 +43,6 @@ interface Ptr {
 export interface PlayerOptions {
   /** container for variable rows (position:relative context lives inside) */
   rows: HTMLElement
-  /** SVG overlay for provenance links */
-  links: SVGSVGElement
-  /** host that both live in (for link geometry) */
-  host: HTMLElement
   onStep?: (at: number, total: number, line: number, lineText: string) => void
 }
 
@@ -271,31 +267,22 @@ export class Player {
       strip.scrollLeft = Math.max(0, mid - strip.clientWidth / 2)
     }
 
-    this.drawLinks()
+    this.markProvenance()
   }
 
-  // ---------------------------------------------------------------- links
-  // Provenance: for a cell that just changed at index i holding value v,
-  // sources are (a) a map entry whose key AND value match (v, i) either way
-  // round, or (b) a scalar holding v or i that is NAMED on the current line.
+  // ---------------------------------------------------------------- provenance
+  // Same matching rules the arrow overlay used — (a) a map entry whose key AND
+  // value match the written (value, index) either way round, (b) a scalar
+  // holding the value or the index that is NAMED on the current line — but
+  // rendered as highlights on the source elements instead of arrows: at this
+  // density, glow beats spaghetti.
   private lineText = ''
 
-  private drawLinks(): void {
-    const svg = this.opts.links
-    const host = this.opts.host
-    svg.innerHTML = ''
-    svg.setAttribute('width', String(host.clientWidth))
-    svg.setAttribute('height', String(host.scrollHeight))
-    svg.setAttribute('viewBox', `0 0 ${host.clientWidth} ${host.scrollHeight}`)
-
-    const base = host.getBoundingClientRect()
-    const at = (el: Element) => {
-      const r = el.getBoundingClientRect()
-      return { x: r.left - base.left + r.width / 2, y: r.top - base.top, h: r.height }
-    }
-    const num = (s: string | undefined): unknown => {
+  private markProvenance(): void {
+    const rows = this.opts.rows
+    const num = (str: string | undefined): unknown => {
       try {
-        return s === undefined ? undefined : JSON.parse(s)
+        return str === undefined ? undefined : JSON.parse(str)
       } catch {
         return undefined
       }
@@ -305,44 +292,21 @@ export class Player {
     const onLine = (n: string | undefined): boolean =>
       !!n && new RegExp(`\\b${n}\\b`).test(this.lineText)
 
-    const links: Array<{ from: Element; to: Element; label: string }> = []
-    for (const cell of host.querySelectorAll<HTMLElement>('.cell.hit[data-vals]')) {
+    for (const cell of rows.querySelectorAll<HTMLElement>('.cell.hit[data-vals]')) {
       const idx = cell.dataset.idx
       const vals = (num(cell.dataset.vals) as Array<unknown>) ?? []
       for (const v of vals) {
-        for (const pair of host.querySelectorAll<HTMLElement>('[data-mapk]')) {
+        for (const pair of rows.querySelectorAll<HTMLElement>('[data-mapk]')) {
           const k = num(pair.dataset.mapk)
           const mv = num(pair.dataset.mapv)
           if ((eq(k, v) && eq(mv, idx)) || (eq(mv, v) && eq(k, idx)))
-            links.push({ from: pair, to: cell, label: '' })
+            pair.classList.add('src')
         }
-        for (const sc of host.querySelectorAll<HTMLElement>('[data-val]')) {
+        for (const sc of rows.querySelectorAll<HTMLElement>('[data-val]')) {
           if (!onLine(sc.dataset.scalar)) continue
           const sv = num(sc.dataset.val)
-          if (eq(sv, v)) links.push({ from: sc, to: cell, label: 'what' })
-          else if (eq(sv, idx)) links.push({ from: sc, to: cell, label: 'where' })
+          if (eq(sv, v) || eq(sv, idx)) sc.classList.add('src')
         }
-      }
-    }
-
-    for (const { from, to, label } of links.slice(0, 4)) {
-      const a = at(from)
-      const b = at(to)
-      const ay = a.y + a.h / 2
-      const by = b.y + b.h / 2
-      const mx = (a.x + b.x) / 2
-      const my = (ay + by) / 2 - Math.max(22, Math.abs(b.x - a.x) * 0.16)
-      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-      p.setAttribute('d', `M ${a.x} ${ay} Q ${mx} ${my} ${b.x} ${by}`)
-      p.setAttribute('class', 'link')
-      svg.append(p)
-      if (label) {
-        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-        t.setAttribute('x', String(mx))
-        t.setAttribute('y', String(my + 3))
-        t.setAttribute('class', 'linklabel')
-        t.textContent = label
-        svg.append(t)
       }
     }
   }
@@ -363,25 +327,18 @@ export class Player {
         moved: prev[n] !== step.vars[n],
       }))
 
-    const scalars: Array<string> = []
-    const blocks: Array<string> = []
-
+    // one pass, in payload order — which instrument() guarantees is the
+    // order of first declaration in the user's own source
+    const rowsHtml: Array<string> = []
     for (const [name, val] of Object.entries(step.vars)) {
       if (this.meta.pointers.has(name)) continue // drawn as a caret instead
       const was = name in prev ? prev[name] : undefined
       const changed = name in prev && fmt(was) !== fmt(val)
       const fresh = !(name in prev)
       const cells = this.changedIndexes(val, was)
-
-      const big =
-        (typeof val === 'string' && val.length > 0) ||
-        isArr(val) ||
-        isMap(val) ||
-        isSet(val)
       const body = this.drawValue(name, val, ptrs, changed ? cells : null)
-      const row = `<div class="vrow${changed ? ' changed' : ''}${fresh ? ' fresh' : ''}">
-        <span class="vname">${esc(name)}</span>${body}</div>`
-      ;(big ? blocks : scalars).push(row)
+      rowsHtml.push(`<div class="vrow${changed ? ' changed' : ''}${fresh ? ' fresh' : ''}">
+        <span class="vname">${esc(name)}</span>${body}</div>`)
     }
 
     const ptrRow = ptrs.length
@@ -396,8 +353,7 @@ export class Player {
       : ''
 
     this.paint(
-      blocks.join('') + ptrRow + scalars.join('') ||
-        `<div class="vrow"><span class="vname">—</span></div>`,
+      rowsHtml.join('') + ptrRow || `<div class="vrow"><span class="vname">—</span></div>`,
     )
   }
 }
