@@ -1,9 +1,17 @@
 <script lang="ts">
   // CodeMirror 6 wrapper. Emits changes; parent owns persistence.
   import { onMount } from 'svelte'
-  import { Decoration, EditorView, keymap } from '@codemirror/view'
-  import { indentWithTab } from '@codemirror/commands'
-  import { basicSetup } from 'codemirror'
+  import {
+    Decoration,
+    EditorView,
+    drawSelection,
+    highlightActiveLineGutter,
+    keymap,
+    lineNumbers,
+  } from '@codemirror/view'
+  import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
+  import { bracketMatching, indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
+  import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
   import { javascript } from '@codemirror/lang-javascript'
   import { Compartment, EditorState } from '@codemirror/state'
 
@@ -29,9 +37,18 @@
       parent: host,
       state: EditorState.create({
         doc: value,
+        // deliberately minimal: no autocompletion, no keyword hints, no
+        // snippets — the only assistance is brackets and indentation
         extensions: [
-          basicSetup,
-          keymap.of([indentWithTab]),
+          lineNumbers(),
+          highlightActiveLineGutter(),
+          history(),
+          drawSelection(),
+          indentOnInput(),
+          bracketMatching(),
+          closeBrackets(),
+          syntaxHighlighting(defaultHighlightStyle),
+          keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
           javascript(),
           lineHl.of([]),
           EditorView.updateListener.of((u) => {
