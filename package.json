@@ -11,13 +11,14 @@
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.2",
+    "@jitl/quickjs-singlefile-mjs-release-sync": "^0.32.0",
     "@tanstack/svelte-start": "github:y7ya-com/svelte-start#v0.0.6-experimental",
     "acorn": "^8.15.0",
     "acorn-walk": "^8.3.4",
     "better-auth": "^1.6.25",
     "codemirror": "^6.0.1",
     "drizzle-orm": "^0.45.2",
-    "quickjs-emscripten": "^0.31.0",
+    "quickjs-emscripten-core": "^0.32.0",
     "svelte": "^5.0.0"
   },
   "devDependencies": {

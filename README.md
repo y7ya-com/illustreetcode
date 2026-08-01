@@ -16,7 +16,13 @@ scratch; list orderings are curated facts, credited and linked to their sources.
   first real consumer and doubles as the port's dogfood.
 - TypeScript strict, Vite, CodeMirror 6, vitest.
 - Tracing: **acorn** AST instrumentation (statement-level probes, real scope
-  analysis) executed in a **Web Worker** — killable, isolated from the page.
+  analysis) executed inside **QuickJS-WASM** in a Web Worker. Your code runs in
+  a sandbox on your machine — never on a server: no page/worker globals are
+  reachable, a deadline interrupt stops runaway loops that no probe can reach
+  (`for(;;){}`), and memory is capped. Worker `terminate()` remains the outer
+  backstop, and a plain in-worker eval is the fallback if WASM fails to load.
+  Tests run natively in a separate worker on purpose — stress budgets measure
+  real complexity, and QuickJS's ~30–50x slowdown would fail correct solutions.
 - No login wall. Progress lives in localStorage; signing in (scaffolded, not
   yet live) will sync it to Cloudflare D1.
 

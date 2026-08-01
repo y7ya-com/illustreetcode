@@ -30,6 +30,7 @@
   let lineText = $state('')
   let error = $state('')
   let returned = $state('')
+  let engine = $state('')
   let caseIdx = $state(-1)
   let whichFn = $state('')
   let tracedCode = ''
@@ -88,6 +89,7 @@
       args,
     })
     running = false
+    engine = t?.engine === 'quickjs-wasm' ? 'wasm sandbox' : t?.engine === 'fallback' ? 'no sandbox (fallback)' : ''
     if (!t) {
       error = "Couldn't step through this code — it didn't parse. Run tests to see the real error."
       total = 0
@@ -134,6 +136,7 @@
       oninput={(e) => player?.go(+e.currentTarget.value)}
     />
     <span class="pos">{total ? `${at + 1} / ${total}` : ''}</span>
+    {#if engine}<span class="engine" title="where your code executed">{engine}</span>{/if}
     {#if content.fn2}
       <select bind:value={whichFn} onchange={visualise}>
         <option value={content.fn}>{content.fn}()</option>
@@ -171,6 +174,11 @@
     min-width: 5.5em; text-align: right;
   }
   .stalebar { color: var(--red); font-size: .78rem; margin-top: .3rem; }
+  .engine {
+    font-size: .68rem; color: var(--violet); border: 1.5px solid var(--violet);
+    border-radius: var(--sks); padding: 0 .45rem; white-space: nowrap;
+    transform: rotate(-.5deg); background: var(--violet-bg);
+  }
   .line { font-size: .8rem; color: var(--muted); margin: .6rem 0 .4rem; white-space: pre; overflow-x: auto; }
   .ret { font-size: .82rem; color: var(--pass); margin: 0 0 .6rem; }
 </style>

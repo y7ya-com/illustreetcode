@@ -21,7 +21,7 @@
   import { Link } from '@tanstack/svelte-router'
   import { CONTENT } from '../lib/data/content'
   import { loadSolution, saveSolution, setSolved, loadProgress } from '../lib/progress'
-  import { runTests } from '../lib/runner'
+  import { runTestsAsync } from '../lib/runner'
   import type { RunReport } from '../lib/runner'
   import Editor from '../lib/components/Editor.svelte'
   import TestResults from '../lib/components/TestResults.svelte'
@@ -60,12 +60,18 @@
     saveTimer = setTimeout(() => saveSolution(slug, code), 800)
   }
 
-  function run(): void {
-    if (!content || !editor) return
+  let running = $state(false)
+  async function run(): Promise<void> {
+    if (!content || !editor || running) return
     const code = editor.getValue()
     saveSolution(slug, code)
-    report = runTests(code, content)
-    if (report.all && !solvedFlag) {
+    running = true
+    try {
+      report = await runTestsAsync(slug, code)
+    } finally {
+      running = false
+    }
+    if (report?.all && !solvedFlag) {
       setSolved(slug, true)
       solvedFlag = true
     }
@@ -137,7 +143,7 @@
     {#if content}
       {#key slug}
         <div class="toolbar">
-          <button class="primary" onclick={run}>Run tests</button>
+          <button class="primary" onclick={run} disabled={running}>{running ? 'running…' : 'Run tests'}</button>
           <button onclick={reset}>Reset</button>
           <span class="hint">⌘↵ runs</span>
         </div>

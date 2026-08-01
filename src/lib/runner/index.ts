@@ -133,3 +133,36 @@ export function runTests(code: string, P: ProblemContent): RunReport {
   const all = passed === P.tests.length && (!stress || stress.ok)
   return { rows, passed, total: P.tests.length, all, ms, logs, stress }
 }
+
+export const RUN_TIMEOUT_MS = 10_000
+
+/** Run the suite in a Worker; terminate on timeout so the tab never freezes. */
+export function runTestsAsync(slug: string, code: string): Promise<RunReport | null> {
+  return new Promise((resolve) => {
+    let w: Worker
+    try {
+      w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+    } catch {
+      resolve(null)
+      return
+    }
+    const stop = setTimeout(() => {
+      w.terminate()
+      resolve({
+        rows: [], passed: 0, total: 0, all: false, ms: RUN_TIMEOUT_MS, logs: [],
+        parseError: `Gave up after ${RUN_TIMEOUT_MS / 1000}s — this looks like an infinite loop. Use Step through to see where it sticks.`,
+      })
+    }, RUN_TIMEOUT_MS)
+    w.onmessage = (ev: MessageEvent<RunReport | null>) => {
+      clearTimeout(stop)
+      w.terminate()
+      resolve(ev.data)
+    }
+    w.onerror = () => {
+      clearTimeout(stop)
+      w.terminate()
+      resolve(null)
+    }
+    w.postMessage({ slug, code })
+  })
+}
