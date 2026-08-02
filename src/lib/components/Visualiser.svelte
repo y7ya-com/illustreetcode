@@ -10,10 +10,13 @@
   let {
     content,
     getCode,
+    reference,
     onActiveLine,
   }: {
     content: ProblemContent
     getCode: () => string
+    /** reference solution source — enables the your-code/reference toggle */
+    reference?: string
     onActiveLine?: (line: number) => void
   } = $props()
 
@@ -32,6 +35,7 @@
   let engine = $state('')
   let caseIdx = $state(-1)
   let whichFn = $state('')
+  let source = $state<'yours' | 'reference'>('yours')
   let tracedCode = ''
 
   onMount(() => {
@@ -42,17 +46,35 @@
         total = t
         lineNo = ln
         lineText = lt
-        onActiveLine?.(ln)
+        onActiveLine?.(source === 'yours' ? ln : 0)
       },
     })
   })
 
   export function markStale(code: string): void {
-    if (hasTrace && tracedCode && code !== tracedCode) stale = true
+    // the reference drawing never goes stale from the user's edits
+    if (source === 'yours' && hasTrace && tracedCode && code !== tracedCode) stale = true
   }
 
-  /** Re-trace the current editor code. Called after every test run. */
-  export async function refresh(): Promise<void> {
+  /** Draw the user's own code (used by Run tests). */
+  export async function showYours(): Promise<void> {
+    source = 'yours'
+    await retrace()
+  }
+
+  /** Draw the reference solution — code stays hidden, only the animation shows. */
+  export async function showReference(): Promise<void> {
+    if (!reference) return
+    source = 'reference'
+    await retrace()
+  }
+
+  /** Re-trace whatever the current source is (picker changes). */
+  export function refresh(): Promise<void> {
+    return retrace()
+  }
+
+  async function retrace(): Promise<void> {
     if (running) return
     if (caseIdx < 0)
       caseIdx =
@@ -65,8 +87,8 @@
     stale = false
     error = ''
     returned = ''
-    const code = getCode()
-    tracedCode = code
+    const code = source === 'reference' && reference ? reference : getCode()
+    tracedCode = source === 'yours' ? code : tracedCode
     const fn2 = content.fn2
 
     // decode's input is whatever encode produced — run encode for real first
@@ -142,6 +164,12 @@
       {#if engine}<span class="engine" title="where your code executed">{engine}</span>{/if}
     </div>
     <div class="bar picks">
+      {#if reference}
+        <div class="srcpick">
+          <button class:on={source === 'yours'} onclick={showYours}>your code</button>
+          <button class:on={source === 'reference'} onclick={showReference}>reference</button>
+        </div>
+      {/if}
       {#if content.fn2}
         <select bind:value={whichFn} onchange={refresh}>
           <option value={content.fn}>{content.fn}()</option>
@@ -156,7 +184,11 @@
       </select>
       {#if running}<span class="pos">tracing…</span>{/if}
     </div>
-    {#if stale}<div class="stalebar">code changed — run tests to redraw</div>{/if}
+    {#if source === 'reference'}
+      <div class="refbar">drawing the reference solution — your editor is untouched</div>
+    {:else if stale}
+      <div class="stalebar">code changed — run tests to redraw</div>
+    {/if}
     <div class="line mono">{total ? `line ${lineNo}:  ${lineText}` : ''}</div>
     {#if returned}<div class="ret mono">{returned}</div>{/if}
     {#if error}<div class="verr">{error}</div>{/if}
@@ -183,6 +215,15 @@
     transform: rotate(-.5deg); background: var(--violet-bg);
   }
   .stalebar { color: var(--red); font-size: .78rem; margin-top: .3rem; }
+  .refbar { color: var(--violet); font-size: .78rem; margin-top: .3rem; }
+  .srcpick { display: flex; gap: 0; }
+  .srcpick button {
+    font-size: .72rem; padding: .1rem .6rem; transform: none; border-radius: 0;
+    border: 1.5px solid var(--pencil); color: var(--muted); background: var(--paper);
+  }
+  .srcpick button:first-child { border-radius: var(--sks) 0 0 var(--sks); border-right: none; }
+  .srcpick button:last-child { border-radius: 0 var(--sks2) var(--sks2) 0; }
+  .srcpick button.on { background: var(--violet-bg); color: var(--violet); border-color: var(--violet); }
   .line { font-size: .8rem; color: var(--muted); margin: .6rem 0 .4rem; white-space: pre; overflow-x: auto; }
   .ret { font-size: .82rem; color: var(--pass); margin: 0 0 .6rem; }
 </style>

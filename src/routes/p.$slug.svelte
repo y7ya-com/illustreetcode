@@ -74,7 +74,7 @@
       report = await runTestsAsync(slug, code)
       // the drawing always reflects the last run — no separate action
       tab = 'draw'
-      await viz?.refresh()
+      await viz?.showYours()
     } finally {
       running = false
     }
@@ -163,9 +163,17 @@
 
         {#if solution}
           <h2>Stuck?</h2>
-          {#if !revealed}
-            <button onclick={() => (revealed = true)}>Show solution</button>
-          {:else}
+          <div class="stuck">
+            <button
+              onclick={() => {
+                tab = 'draw'
+                viz?.showReference()
+              }}>Show illustrated solution</button>
+            {#if !revealed}
+              <button onclick={() => (revealed = true)}>Show code</button>
+            {/if}
+          </div>
+          {#if revealed}
             <pre class="solution mono">{solution}</pre>
             <button onclick={loadReference}>Load into editor</button>
           {/if}
@@ -177,6 +185,7 @@
           <Visualiser
             bind:this={viz}
             {content}
+            reference={solution}
             getCode={() => editor?.getValue() ?? ''}
             onActiveLine={(l) => (activeLine = l)}
           />
@@ -254,6 +263,7 @@
     white-space: pre;
   }
   .missing { padding: 1rem; border: 1.6px dashed var(--pencil); border-radius: var(--sk); color: var(--muted); background: #fff; margin-top: 1rem; }
+  .stuck { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .7rem; }
   .toolbar { display: flex; align-items: center; gap: .6rem; margin-bottom: .7rem; flex-wrap: wrap; }
   .hint { color: var(--muted); font-size: .75rem; margin-left: auto; }
 </style>
